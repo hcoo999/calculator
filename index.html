@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>년도별 예상연금액 산출 및 시뮬레이션</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+        .input-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .form-control {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-weight: bold;
+            margin-bottom: 6px;
+            color: #34495e;
+            font-size: 14px;
+        }
+        input, select {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 15px;
+            text-align: center; 
+        }
+        .dynamic-input {
+            display: none;
+            grid-column: span 3;
+            background: #f1f4f7;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+            margin-top: 5px;
+        }
+        .btn-container {
+            grid-column: span 3;
+            text-align: center;
+            margin-top: 10px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #27ae60;
+        }
+        .result-summary {
+            background: #e8f8f5;
+            border: 1px solid #a3e4d7;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 25px;
+            display: none;
+        }
+        .result-summary h2 {
+            margin-top: 0;
+            color: #16a085;
+            font-size: 18px;
+        }
+        .result-item {
+            margin: 8px 0;
+            font-size: 15px;
+        }
+        .result-item span {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .chart-container {
+            margin-top: 30px;
+            position: relative;
+            height: 380px;
+            display: none;
+        }
+        .table-container {
+            margin-top: 30px;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: right;
+            font-size: 14px;
+        }
+        th, td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #ebedef;
+            color: #34495e;
+            text-align: center;
+        }
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>[ 예상연금액 계산 시뮬레이터 ] (단위: 만원)</h1>
+    
+    <div class="input-group">
+        <div class="form-control">
+            <label for="currentBalance">* 개시시점 적립금액 (만원)</label>
+            <input type="text" id="currentBalance" value="10,000" oninput="formatInputWithCommas(this)">
+        </div>
+        <div class="form-control">
+            <label for="currentAge">* 연금개시 나이 (세)</label>
+            <input type="text" id="currentAge" value="55" oninput="formatInputWithCommas(this)">
+        </div>
+        <div class="form-control">
+            <label for="yieldRate">* 운용이율 (%)</label>
+            <input type="text" id="yieldRate" value="5.0">
+        </div>
+        
+        <div class="form-control" style="grid-column: span 3;">
+            <label for="withdrawType">* 연금 인출(수령) 방법 선택</label>
+            <select id="withdrawType" onchange="toggleInputs()">
+                <option value="amount">금액지정 (매월 일정액 인출)</option>
+                <option value="period" selected>기간지정 (정해진 기간 동안 분할 인출)</option>
+                <option value="increasing">금액체증형 (지정 주기로 인출액 증가)</option>
+            </select>
+        </div>
+
+        <div id="inputAmount" class="dynamic-input">
+            <div class="form-control" style="max-width: 300px;">
+                <label for="monthlyAmount">지정 인출금액 (월 / 만원)</label>
+                <input type="text" id="monthlyAmount" value="100" oninput="formatInputWithCommas(this)">
+            </div>
+        </div>
+
+        <div id="inputPeriod" class="dynamic-input" style="display: block;">
+            <div class="form-control" style="max-width: 300px;">
+                <label for="withdrawPeriod">인출 기간 (년)</label>
+                <input type="text" id="withdrawPeriod" value="10" oninput="formatInputWithCommas(this)">
+            </div>
+        </div>
+
+        <div id="inputIncreasing" class="dynamic-input">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                <div class="form-control">
+                    <label for="incMonthlyAmount">초기 인출금액 (월 / 만원)</label>
+                    <input type="text" id="incMonthlyAmount" value="50" oninput="formatInputWithCommas(this)">
+                </div>
+                <div class="form-control">
+                    <label for="incPeriod">체증 주기 (년)</label>
+                    <input type="text" id="incPeriod" value="3" oninput="formatInputWithCommas(this)">
+                </div>
+                <div class="form-control">
+                    <label for="incRate">체증률 (%)</label>
+                    <input type="text" id="incRate" value="3">
+                </div>
+            </div>
+        </div>
+
+        <div class="btn-container">
+            <button type="button" onclick="calculatePension()">시뮬레이션 실행</button>
+        </div>
+    </div>
+
+    <div id="resultSummary" class="result-summary">
+        <h2>📊 산출 결과 요약</h2>
+        <div class="result-item" id="resMonthly"></div>
+        <div class="result-item" id="resDepletion"></div>
+        <div class="result-item" id="resAge105"></div>
+    </div>
+
+    <div class="chart-container" id="chartWrapper">
+        <canvas id="pensionChart"></canvas>
+    </div>
+
+    <div class="table-container">
+        <table id="simulationTable" style="display: none;">
+            <thead>
+                <tr>
+                    <th style="text-align: center;">나이</th>
+                    <th style="text-align: center;">년도</th>
+                    <th>월 인출금액 (만원)</th>
+                    <th>연간 인출금액 (만원)</th>
+                    <th>인출률 (%)</th>
+                    <th>기초 적립금 (만원)</th>
+                    <th>인출 후 적립금 (만원)</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let myChart = null; 
+
+    // 숫자에 실시간으로 천단위 콤마(,)를 추가하는 가독성 보완 함수
+    function formatInputWithCommas(input) {
+        let value = input.value.replace(/[^0-9]/g, '');
+        if (value) {
+            input.value = parseInt(value, 10).toLocaleString('ko-KR');
+        } else {
+            input.value = '';
+        }
+    }
+
+    // 콤마가 포함된 문자열을 연산 가능한 순수 숫자로 정제
+    function parseValue(id) {
+        let valStr = document.getElementById(id).value.replace(/,/g, '');
+        return parseFloat(valStr) || 0;
+    }
+
+    function toggleInputs() {
+        const type = document.getElementById('withdrawType').value;
+        document.getElementById('inputAmount').style.display = type === 'amount' ? 'block' : 'none';
+        document.getElementById('inputPeriod').style.display = type === 'period' ? 'block' : 'none';
+        document.getElementById('inputIncreasing').style.display = type === 'increasing' ? 'block' : 'none';
+    }
+
+    function formatManwon(num) {
+        if(num <= 0) return "0만원";
+        return Math.floor(num).toLocaleString('ko-KR') + "만원";
+    }
+
+    function calculatePension() {
+        const currentBalance = parseValue('currentBalance');
+        const currentAge = parseValue('currentAge');
+        const yieldRate = parseValue('yieldRate') / 100;
+        const withdrawType = document.getElementById('withdrawType').value;
+        const currentYear = new Date().getFullYear();
+
+        let tableBodyHTML = '';
+        let balance = currentBalance;
+        
+        let depletionAge = null;
+        let depletionYear = null;
+        let age105Balance = 0;
+        let initialMonthlyStr = '';
+
+        let monthlyWithdraw = 0;
+        let periodYears = 0;
+        let incPeriod = 1;
+        let incRate = 0;
+
+        if (withdrawType === 'amount') {
+            monthlyWithdraw = parseValue('monthlyAmount');
+            initialMonthlyStr = `${formatManwon(monthlyWithdraw)} / 월`;
+        } else if (withdrawType === 'period') {
+            periodYears = parseValue('withdrawPeriod') || 1;
+            
+            // 월별 복리 반영 원리금 균등 인출(PMT) 공식 적용
+            const monthlyRate = yieldRate / 12;
+            const totalMonths = periodYears * 12;
+            
+            if (monthlyRate === 0) {
+                monthlyWithdraw = currentBalance / totalMonths;
+            } else {
+                monthlyWithdraw = currentBalance * (monthlyRate / (1 - Math.pow(1 + monthlyRate, -totalMonths)));
+            }
+            initialMonthlyStr = `${formatManwon(monthlyWithdraw)} / 월 (원리금 균등 완전소진)`;
+        } else if (withdrawType === 'increasing') {
+            monthlyWithdraw = parseValue('incMonthlyAmount');
+            incPeriod = parseValue('incPeriod') || 1;
+            incRate = parseValue('incRate');
+            initialMonthlyStr = `${formatManwon(monthlyWithdraw)} / 월 (초기값, ${incPeriod}년 주기 ${incRate}% 체증)`;
+        }
+
+        let loopMonthlyWithdraw = monthlyWithdraw;
+
+        let labels = [];
+        let dataBalances = [];
+        let dataWithdraws = [];
+
+        for (let age = currentAge; age <= 105; age++) {
+            const year = currentYear + (age - currentAge);
+            const elapsedYears = age - currentAge; 
+            
+            let beforeBalance = balance;
+            if (beforeBalance <= 0) {
+                break;
+            }
+
+            let annualWithdraw = loopMonthlyWithdraw * 12;
+            
+            // [기간지정 특화 로직] 지정 기간이 종료되는 마지막 해 처리
+            if (withdrawType === 'period' && elapsedYears === periodYears - 1) {
+                // 마지막 해에는 당해 연도 발생할 이자까지 포함한 전액을 인출금액으로 지정하여 자투리를 없앰
+                annualWithdraw = beforeBalance * (1 + yieldRate);
+                loopMonthlyWithdraw = annualWithdraw / 12;
+            } 
+            // 지정 기간이 완전히 끝난 후에는 인출액을 0으로 처리
+            else if (withdrawType === 'period' && elapsedYears >= periodYears) {
+                annualWithdraw = 0;
+                loopMonthlyWithdraw = 0;
+            }
+
+            let afterBalance = (beforeBalance * (1 + yieldRate)) - annualWithdraw;
+
+            // 계산상 미세 잔돈 및 자산 부족 시 고갈 시점 세팅
+            if (afterBalance < 0 || (withdrawType === 'period' && elapsedYears === periodYears - 1)) {
+                if (afterBalance < 0) {
+                    annualWithdraw = beforeBalance * (1 + yieldRate); 
+                    loopMonthlyWithdraw = annualWithdraw / 12; 
+                }
+                afterBalance = 0;
+                if (depletionAge === null) {
+                    depletionAge = age;
+                    depletionYear = year;
+                }
+            }
+
+            let withdrawRate = beforeBalance > 0 ? (annualWithdraw / beforeBalance) * 100 : 0;
+            if (withdrawRate > 100) withdrawRate = 100;
+
+            labels.push(`${age}세`);
+            dataBalances.push(Math.floor(beforeBalance));
+            dataWithdraws.push(Math.floor(annualWithdraw));
+
+            tableBodyHTML += `<tr>
+                <td style="text-align: center;">${age}세</td>
+                <td style="text-align: center;">${year}년</td>
+                <td style="color: #2980b9; font-weight: bold;">${formatManwon(loopMonthlyWithdraw)}</td>
+                <td>${formatManwon(annualWithdraw)}</td>
+                <td style="color: #e67e22; font-weight: bold;">${withdrawRate.toFixed(1)}%</td>
+                <td>${formatManwon(beforeBalance)}</td>
+                <td>${formatManwon(afterBalance)}</td>
+            </tr>`;
+
+            balance = afterBalance;
+
+            // 금액체증형 주기별 인출액 증액 연산
+            if (withdrawType === 'increasing' && balance > 0) {
+                if ((elapsedYears + 1) % incPeriod === 0) {
+                    loopMonthlyWithdraw = loopMonthlyWithdraw * (1 + (incRate / 100));
+                }
+            }
+
+            if (age === 105) {
+                age105Balance = balance;
+            }
+
+            if (balance <= 0) {
+                break;
+            }
+        }
+
+        document.getElementById('tableBody').innerHTML = tableBodyHTML;
+        document.getElementById('simulationTable').style.display = 'table';
+        document.getElementById('resultSummary').style.display = 'block';
+        document.getElementById('chartWrapper').style.display = 'block';
+
+        document.getElementById('resMonthly').innerHTML = `⊙ 초기 예상 인출 금액: <span>${initialMonthlyStr}</span>`;
+        
+        if (depletionAge !== null && depletionAge <= 105) {
+            let statusText = withdrawType === 'period' ? '지정 기간 만료로 전액 소진됨' : '에 고갈됨';
+            document.getElementById('resDepletion').innerHTML = `⊙ 적립금 고갈 시점: <span style="color: #c0392b;">${depletionAge}세 (${depletionYear}년) ${statusText}</span>`;
+            document.getElementById('resAge105').style.display = 'none';
+        } else {
+            document.getElementById('resDepletion').innerHTML = `⊙ 적립금 고갈 시점: <span style="color: #27ae60;">105세까지 고갈되지 않음</span>`;
+            document.getElementById('resAge105').style.display = 'block';
+            document.getElementById('resAge105').innerHTML = `⊙ 105세 시점 적립금: <span style="color: #27ae60;">${formatManwon(age105Balance)}</span>`;
+        }
+
+        if (myChart) {
+            myChart.destroy();
+        }
+
+        const ctx = document.getElementById('pensionChart').getContext('2d');
+        myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '기초 적립금 (만원)',
+                        data: dataBalances,
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.08)',
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.1
+                    },
+                    {
+                        label: '연간 인출금액 (만원)',
+                        data: dataWithdraws,
+                        borderColor: '#e67e22',
+                        backgroundColor: 'rgba(230, 126, 34, 0.7)',
+                        borderWidth: 1,
+                        type: 'bar'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value.toLocaleString() + '만';
+官                         }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.raw.toLocaleString() + ' 만원';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+</script>
+
+</body>
+</html>
