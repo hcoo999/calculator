@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>경제적 자유 시뮬레이터</title>
+<style>
+  :root{
+    --navy:#132347;
+    --navy-2:#1c3163;
+    --teal:#0f8a72;
+    --teal-light:#e5f5f1;
+    --amber:#e8963a;
+    --orange-dark:#c1440e;
+    --red:#d64545;
+    --paper:#f6f4ee;
+    --card:#ffffff;
+    --line:#e6e2d8;
+    --ink:#1b1f27;
+    --ink-soft:#6b7280;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",-apple-system,BlinkMacSystemFont,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:560px;margin:0 auto;padding:20px 16px 60px;}
+
+  .brand{
+    display:flex;align-items:center;gap:8px;
+    padding:6px 2px 18px;
+    color:var(--navy);
+    font-weight:800;font-size:15px;letter-spacing:.2px;
+  }
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--amber);}
+  .brand .sub{margin-left:auto;font-size:11px;color:var(--ink-soft);font-weight:600;}
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:22px 20px;
+    margin-bottom:16px;
+    box-shadow:0 1px 2px rgba(19,35,71,.04);
+  }
+  h2{
+    font-size:17px;margin:0 0 16px;font-weight:800;color:var(--navy);
+    display:flex;align-items:center;gap:8px;
+  }
+  h2 .badge{
+    width:22px;height:22px;border-radius:7px;background:var(--navy);
+    display:inline-flex;align-items:center;justify-content:center;
+    color:#fff;font-size:12px;
+  }
+  label{font-size:12.5px;color:var(--ink-soft);font-weight:600;display:block;margin-bottom:6px;}
+
+  .tabs{display:flex;gap:8px;margin-bottom:16px;}
+  .tab{
+    flex:1;text-align:center;padding:11px 4px;border-radius:11px;border:1.5px solid var(--line);
+    font-size:12.5px;font-weight:700;color:var(--ink-soft);cursor:pointer;background:#fff;
+    transition:.15s;
+  }
+  .tab.active{background:var(--navy);border-color:var(--navy);color:#fff;}
+
+  .desc{
+    background:var(--teal-light);border-radius:12px;padding:13px 14px;
+    font-size:12.5px;line-height:1.55;color:#0b5c4c;margin-bottom:16px;
+  }
+
+  .toggle-row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 2px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+    margin-bottom:18px;font-size:13.5px;font-weight:700;color:var(--ink);
+  }
+  .switch{position:relative;width:44px;height:26px;flex:none;}
+  .switch input{opacity:0;width:0;height:0;}
+  .slider{position:absolute;inset:0;background:#d7dae0;border-radius:26px;cursor:pointer;transition:.2s;}
+  .slider:before{content:"";position:absolute;width:20px;height:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 2px rgba(0,0,0,.2);}
+  input:checked + .slider{background:var(--teal);}
+  input:checked + .slider:before{transform:translateX(18px);}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+  .field{position:relative;}
+  .field input{
+    width:100%;padding:12px 46px 12px 12px;border-radius:11px;border:1.5px solid var(--line);
+    font-size:15px;font-weight:700;color:var(--ink);background:#fbfaf7;
+  }
+  .field input:focus{outline:none;border-color:var(--navy);background:#fff;}
+  .unit{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:12.5px;color:var(--ink-soft);font-weight:700;}
+  .hint{font-size:11.5px;color:var(--ink-soft);margin:-8px 0 14px 2px;}
+
+  .btn{
+    width:100%;padding:15px;border-radius:13px;border:none;font-size:15px;font-weight:800;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .btn-primary{background:var(--navy);color:#fff;margin-bottom:10px;}
+  .btn-primary:active{background:var(--navy-2);}
+  .btn-ghost{background:#fff;color:var(--navy);border:1.5px solid var(--line);}
+
+  /* results */
+  #resultsCard{display:none;}
+  .headline{font-size:13px;color:var(--ink-soft);font-weight:700;margin-bottom:2px;}
+  .headline b{color:var(--teal);font-weight:800;}
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 12px;margin-top:14px;}
+  .stat .lbl{font-size:12px;color:var(--ink-soft);font-weight:700;margin-bottom:4px;}
+  .stat .val{font-size:22px;font-weight:800;color:var(--navy);}
+  .stat .val.red{color:var(--red);}
+  .stat .val.teal{color:var(--teal);}
+  .stat .val.orange, .headline .orange{color:var(--orange-dark);}
+  .divider{height:1px;background:var(--line);margin:16px 0;}
+
+  .preset-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:-4px 0 14px;}
+  .preset{
+    text-align:center;padding:9px 4px;border-radius:10px;border:1.5px solid var(--line);
+    font-size:11.5px;color:var(--ink-soft);font-weight:600;cursor:pointer;background:#fff;line-height:1.5;
+  }
+  .preset b{font-size:13px;}
+  .preset.active{border-color:var(--navy);background:var(--navy);color:#fff;}
+  .warn-note{
+    display:none;
+    background:#fff4e2;color:#8a4b0a;border-radius:11px;padding:11px 13px;
+    font-size:11.5px;line-height:1.55;font-weight:600;margin-bottom:12px;
+  }
+  .tax-note{
+    background:#f0f1f4;color:#454b58;border-radius:11px;padding:11px 13px;
+    font-size:11.5px;line-height:1.55;font-weight:600;margin-bottom:18px;
+  }
+
+  .chart-toggle{
+    display:flex;align-items:center;gap:8px;background:var(--teal-light);
+    border-radius:11px;padding:10px 14px;margin-bottom:16px;font-size:13px;font-weight:700;color:#0b5c4c;
+  }
+  .legend{display:flex;gap:14px;margin-bottom:10px;font-size:12px;font-weight:700;color:var(--ink-soft);flex-wrap:wrap;}
+  .legend span{display:inline-flex;align-items:center;gap:5px;}
+  .legend i{width:9px;height:9px;border-radius:50%;display:inline-block;}
+
+  .detail-box{
+    background:var(--navy);color:#fff;border-radius:12px;padding:14px 16px;margin-bottom:12px;
+    font-size:13px;line-height:1.7;display:none;
+  }
+  .detail-box b{font-size:14.5px;}
+  .detail-box .g{color:#8fd6b8;} .detail-box .r{color:#ff9b9b;} .detail-box .b{color:#9cc4ff;}
+
+  canvas{display:block;width:100%;}
+
+  .table-wrap{max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:12px;margin-top:6px;}
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  thead th{
+    position:sticky;top:0;background:var(--navy);color:#fff;padding:9px 6px;font-weight:700;
+    text-align:right;white-space:nowrap;
+  }
+  thead th:first-child{text-align:left;}
+  tbody td{padding:8px 6px;text-align:right;border-bottom:1px solid var(--line);color:var(--ink);white-space:nowrap;}
+  tbody td:first-child{text-align:left;font-weight:700;color:var(--navy);}
+  tbody tr:nth-child(even){background:#fafaf7;}
+  .neg{color:var(--red);}
+  .pos{color:var(--teal);}
+  tr.fi-row td{background:#fff4e2;}
+
+  .footnote{font-size:11px;color:var(--ink-soft);text-align:center;margin-top:10px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+
+
+  <!-- INPUT CARD -->
+  <div class="card">
+    <h2><span class="badge">▤</span>경제적자유를 위한 자산과 목표 설정</h2>
+
+    <label>은퇴 목표 전략 선택</label>
+    <div class="tabs">
+      <div class="tab active" data-strategy="preserve">자산 보존형</div>
+      <div class="tab" data-strategy="deplete">자산 소진형</div>
+      <div class="tab" data-strategy="achieve">자산 달성형</div>
+    </div>
+
+    <div class="desc" id="strategyDesc">
+      💡 원금(실질가치)을 보존하여 자녀에게 상속하거나 영구적인 현금흐름을 만듭니다.
+    </div>
+
+    <div id="retireAgeField" style="display:none;margin-bottom:16px;">
+      <label>은퇴(자유) 목표 나이</label>
+      <div class="field"><input type="number" id="inputRetireAge" value="60"><span class="unit">세</span></div>
+      <div class="hint" style="margin-top:6px;">그때까지 모은 자산만으로 소진 나이까지 쓸 월 지출액 계산(배당,공적연금 미고려)</div>
+    </div>
+
+    <div id="extraField" style="display:none;margin-bottom:16px;">
+      <label id="extraLabel">자산 소진 목표 나이</label>
+      <div class="field"><input type="number" id="inputExtra" value="100"><span class="unit" id="extraUnit">세</span></div>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <label>현재 나이</label>
+        <div class="field"><input type="number" id="inputAge" value="35"><span class="unit">세</span></div>
+      </div>
+      <div>
+        <label>현재 순자산</label>
+        <div class="field"><input type="number" id="inputAssets" value="10000"><span class="unit">만원</span></div>
+      </div>
+    </div>
+    <div class="hint">부채를 제외한 총 현금성 자산</div>
+
+    <div class="grid2">
+      <div>
+        <label>월 평균 소득</label>
+        <div class="field"><input type="number" id="inputIncome" value="500"><span class="unit">만원</span></div>
+      </div>
+      <div>
+        <label>월 평균 지출액</label>
+        <div class="field"><input type="number" id="inputExpense" value="300"><span class="unit">만원</span></div>
+      </div>
+    </div>
+    <div class="hint" id="savingsHint">월평균 저축액 200만원</div>
+
+    <div style="margin-bottom:16px;">
+      <label>월 배당금 <span style="font-weight:500;color:var(--ink-soft);">(배당 투자 수령액, 선택)</span></label>
+      <div class="field"><input type="number" id="inputDividend" value="0"><span class="unit">만원</span></div>
+      <div class="hint" style="margin-top:6px;">은퇴 전후 관계없이 매년 계속 수령하는 것으로 계산됩니다</div>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <label>연 예상 물가상승률</label>
+        <div class="field"><input type="number" step="0.1" id="inputInflation" value="2.5"><span class="unit">%</span></div>
+      </div>
+      <div>
+        <label>연 목표 투자수익률</label>
+        <div class="field"><input type="number" step="0.1" id="inputReturn" value="5.5"><span class="unit">%</span></div>
+      </div>
+    </div>
+
+    <div class="preset-row" id="returnPresets">
+      <div class="preset" data-value="3.5">안정형<br><b>3.5%</b></div>
+      <div class="preset active" data-value="5.5">균형형<br><b>5.5%</b></div>
+      <div class="preset" data-value="7.5">성장형<br><b>7.5%</b></div>
+    </div>
+    <div class="warn-note" id="returnWarning">⚠️ 수익률을 10% 이상으로 설정하면 장기 복리 효과로 인해 미래 자산이 과도하게 부풀려지는 착시현상(과신 오류)이 발생할 수 있으니 주의하세요.</div>
+
+    <div class="tax-note">🧾 본 시뮬레이션은 <b>세전(稅前)</b> 기준입니다. 이자·배당소득세, 금융투자소득세, 연금소득세 등 실제 과세는 반영되어 있지 않으므로 실수령 자산은 달라질 수 있습니다.</div>
+
+    <div class="toggle-row">
+      <span>국민(공적)연금 수령 반영</span>
+      <label class="switch"><input type="checkbox" id="togglePension"><span class="slider"></span></label>
+    </div>
+    <div id="pensionField" style="display:none;margin-top:14px;margin-bottom:4px;">
+      <div class="grid2">
+        <div>
+          <label>국민연금 수령 시작 나이</label>
+          <div class="field"><input type="number" id="inputPensionAge" value="65"><span class="unit">세</span></div>
+        </div>
+        <div>
+          <label>예상 수령액 (월)</label>
+          <div class="field"><input type="number" id="inputPensionAmount" value="90"><span class="unit">만원</span></div>
+        </div>
+      </div>
+      <div class="hint" style="margin-top:-8px;">개시 나이 시점에 입력하신 금액을 그대로 받기 시작하며, 이후 매년 물가상승률의 <b>50%</b>씩 증액되는 것으로 가정합니다</div>
+    </div>
+
+    <div id="expenseChangeSection">
+      <div class="toggle-row">
+        <span>경제적 자유 달성 후 생활비 변경</span>
+        <label class="switch"><input type="checkbox" id="toggleExpenseChange"><span class="slider"></span></label>
+      </div>
+      <div id="postFiField" style="display:none;margin-top:-10px;margin-bottom:16px;">
+        <label>은퇴 후 월 생활비</label>
+        <div class="field"><input type="number" id="inputPostFiExpense" value="250"><span class="unit">만원</span></div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="btnRun">📈 시뮬레이션 분석</button>
+    <button class="btn btn-ghost" id="btnShare">🔗 결과 공유하기</button>
+  </div>
+
+  <!-- RESULTS CARD -->
+  <div class="card" id="resultsCard">
+    <div class="headline">시뮬레이션 결과 (<b id="rFiAge" class="orange">-</b>세 달성)</div>
+    <div class="stat-grid">
+      <div class="stat"><div class="lbl" id="lblFiAge">자유 예상 나이</div><div class="val orange" id="rFiAge2">-</div></div>
+      <div class="stat"><div class="lbl" id="lblRequired">필요 자산 (물가반영)</div><div class="val teal" id="rRequired">-</div></div>
+      <div class="stat"><div class="lbl">남은 준비 기간</div><div class="val" id="rYearsLeft">-</div></div>
+      <div class="stat"><div class="lbl" id="lblDepletion">자산 소진 예상</div><div class="val red" id="rDepletion">-</div></div>
+    </div>
+    <div class="divider"></div>
+    <div class="stat-grid">
+      <div class="stat"><div class="lbl">월 소득액</div><div class="val" id="rIncome">-</div></div>
+      <div class="stat"><div class="lbl">월 저축액</div><div class="val teal" id="rSavings">-</div></div>
+      <div class="stat"><div class="lbl">월 지출액</div><div class="val red" id="rExpense">-</div></div>
+      <div class="stat"><div class="lbl">저축율</div><div class="val" id="rRate">-</div></div>
+    </div>
+  </div>
+
+  <!-- CASHFLOW CHART -->
+  <div class="card" id="chartCard" style="display:none;">
+    <h2>📊 자산 성장 및 소득/지출 시뮬레이션</h2>
+    <div class="chart-toggle">
+      <label class="switch"><input type="checkbox" id="toggleReal" checked><span class="slider"></span></label>
+      실질가치 반영 (물가상승률 차감)
+    </div>
+
+    <div style="font-size:12.5px;font-weight:700;color:var(--ink-soft);margin-bottom:8px;">▼ 연간 자금 흐름 (저축/투자수익 vs 지출)</div>
+    <div class="legend">
+      <span><i style="background:#0f8a72"></i>신규 저축</span>
+      <span><i style="background:#8b5cf6"></i>배당금</span>
+      <span><i style="background:#e8963a"></i>국민연금</span>
+      <span><i style="background:#d64545"></i>연간 지출</span>
+      <span><i style="background:#4d7fd6"></i>투자 수익</span>
+    </div>
+    <div class="detail-box" id="cashDetail"></div>
+    <canvas id="cashflowChart" height="220"></canvas>
+
+    <div class="divider"></div>
+
+    <div style="font-size:12.5px;font-weight:700;color:var(--ink-soft);margin-bottom:8px;">▼ 총 순자산 추이</div>
+    <div class="detail-box" id="networthDetail"></div>
+    <canvas id="networthChart" height="220"></canvas>
+
+    <div class="divider"></div>
+
+    <div style="font-size:12.5px;font-weight:700;color:var(--ink-soft);margin-bottom:8px;">▼ 연도별 상세 시뮬레이션 결과 (단위: 만원)</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>나이</th><th>기초자산</th><th>연간저축</th><th>투자수익</th><th>배당금</th><th>국민연금</th><th>연간지출</th><th>기말자산</th></tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footnote">본 시뮬레이션은 입력값을 기반으로 한 추정치이며,<br>실제 투자 결과 및 물가 변동에 따라 달라질 수 있습니다.</div>
+</div>
+
+<script>
+let currentStrategy = 'preserve';
+let simRows = [];
+let fiAge = null, depletionAge = null;
+
+function updateResultLabels(){
+  if (currentStrategy === 'deplete'){
+    document.getElementById('lblFiAge').textContent = '은퇴(자유) 예상 나이';
+    document.getElementById('lblRequired').textContent = '은퇴 시점 예상 자산';
+    document.getElementById('lblDepletion').textContent = '가능한 월 지출액';
+  } else {
+    document.getElementById('lblFiAge').textContent = '자유 예상 나이';
+    document.getElementById('lblRequired').textContent = '필요 자산 (물가반영)';
+    document.getElementById('lblDepletion').textContent = '자산 소진 예상';
+  }
+}
+
+const strategyMeta = {
+  preserve: {
+    desc: '💡 원금(실질가치)을 보존하여 자녀에게 상속하거나 영구적인 현금흐름을 만듭니다.',
+    extra: false
+  },
+  deplete: {
+    desc: '💡 원하는 은퇴 나이를 정하면, 그때까지 모은 자산만으로 목표 소진 나이까지 얼마를 쓸 수 있는지 역산합니다.',
+    extra: true, label: '자산 완전 소진 목표 나이', unit: '세', defaultVal: 100
+  },
+  achieve: {
+    desc: '💡 특정 목표 자산 금액에 도달하는 것을 경제적 자유의 기준으로 삼습니다.',
+    extra: true, label: '목표 자산 금액', unit: '만원', defaultVal: 100000
+  }
+};
+
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    currentStrategy = tab.dataset.strategy;
+    const meta = strategyMeta[currentStrategy];
+    document.getElementById('strategyDesc').textContent = meta.desc;
+    const extraField = document.getElementById('extraField');
+    if (meta.extra){
+      extraField.style.display = 'block';
+      document.getElementById('extraLabel').textContent = meta.label;
+      document.getElementById('extraUnit').textContent = meta.unit;
+      document.getElementById('inputExtra').value = meta.defaultVal;
+    } else {
+      extraField.style.display = 'none';
+    }
+    document.getElementById('retireAgeField').style.display = currentStrategy==='deplete' ? 'block' : 'none';
+    document.getElementById('expenseChangeSection').style.display = currentStrategy==='deplete' ? 'none' : 'block';
+    updateResultLabels();
+  });
+});
+
+document.getElementById('toggleExpenseChange').addEventListener('change', (e)=>{
+  document.getElementById('postFiField').style.display = e.target.checked ? 'block' : 'none';
+});
+document.getElementById('togglePension').addEventListener('change', (e)=>{
+  document.getElementById('pensionField').style.display = e.target.checked ? 'block' : 'none';
+});
+
+function updateSavingsHint(){
+  const income = parseFloat(document.getElementById('inputIncome').value)||0;
+  const expense = parseFloat(document.getElementById('inputExpense').value)||0;
+  document.getElementById('savingsHint').textContent = `월평균 저축액 ${(income-expense).toLocaleString()}만원`;
+}
+document.getElementById('inputIncome').addEventListener('input', updateSavingsHint);
+document.getElementById('inputExpense').addEventListener('input', updateSavingsHint);
+
+document.querySelectorAll('.preset').forEach(p=>{
+  p.addEventListener('click', ()=>{
+    document.querySelectorAll('.preset').forEach(x=>x.classList.remove('active'));
+    p.classList.add('active');
+    document.getElementById('inputReturn').value = p.dataset.value;
+    updateReturnWarning();
+  });
+});
+
+function updateReturnWarning(){
+  const v = parseFloat(document.getElementById('inputReturn').value) || 0;
+  const warn = document.getElementById('returnWarning');
+  warn.style.display = v >= 10 ? 'block' : 'none';
+  // deselect presets if the value no longer matches one of them
+  const match = [...document.querySelectorAll('.preset')].find(p=>parseFloat(p.dataset.value)===v);
+  document.querySelectorAll('.preset').forEach(p=>p.classList.toggle('active', p===match));
+}
+document.getElementById('inputReturn').addEventListener('input', updateReturnWarning);
+
+function fmtEok(v){
+  if (Math.abs(v) >= 10000){
+    return (v/10000).toFixed(1)+'억';
+  }
+  return Math.round(v).toLocaleString()+'만원';
+}
+function fmtMan(v){ return Math.round(v).toLocaleString()+'만원'; }
+
+function runSimulation(){
+  const age0 = parseFloat(document.getElementById('inputAge').value);
+  const assets0 = parseFloat(document.getElementById('inputAssets').value);
+  const income = parseFloat(document.getElementById('inputIncome').value);
+  const expense = parseFloat(document.getElementById('inputExpense').value);
+  const dividendMonthly = parseFloat(document.getElementById('inputDividend').value)||0;
+  const inflation = parseFloat(document.getElementById('inputInflation').value)/100;
+  const nominalReturn = parseFloat(document.getElementById('inputReturn').value)/100;
+  const changeExpenseAfterFI = document.getElementById('toggleExpenseChange').checked;
+  const postFiExpense = changeExpenseAfterFI ? parseFloat(document.getElementById('inputPostFiExpense').value) : expense;
+  const useReal = document.getElementById('toggleReal').checked;
+  const pensionEnabled = document.getElementById('togglePension').checked;
+  const pensionAge = pensionEnabled ? parseFloat(document.getElementById('inputPensionAge').value) : Infinity;
+  const pensionMonthly = pensionEnabled ? (parseFloat(document.getElementById('inputPensionAmount').value)||0) : 0;
+  // The person enters the amount they expect to actually receive starting at the
+  // pension start age (i.e. that year's won, not discounted). From the start age
+  // onward, the National Pension is only partially inflation-indexed in this model,
+  // so the nominal payout grows at half the inflation rate each year. To fold this
+  // into our real-terms simulation core we convert each year's nominal payout back
+  // to today's purchasing power by dividing by the inflation accumulated since age0.
+  function pensionRealAt(age){
+    if (!pensionEnabled || age < pensionAge) return 0;
+    const nominalAtAge = pensionMonthly*12 * Math.pow(1 + 0.5*inflation, age - pensionAge);
+    return nominalAtAge / Math.pow(1+inflation, age - age0);
+  }
+
+  const realReturn = (1+nominalReturn)/(1+inflation) - 1;
+
+  const depletionTargetAge = currentStrategy==='deplete' ? parseFloat(document.getElementById('inputExtra').value) : 100;
+  const targetAmount = currentStrategy==='achieve' ? parseFloat(document.getElementById('inputExtra').value) : null;
+
+  const annualIncome = income*12;
+  const annualExpense = expense*12;
+  const annualPostFiExpense = postFiExpense*12;
+  const annualSavings = annualIncome - annualExpense;
+  const annualDividend = dividendMonthly*12;
+
+  function requiredAt(age){
+    if (currentStrategy === 'preserve'){
+      const exp = changeExpenseAfterFI ? annualPostFiExpense : annualExpense;
+      return realReturn > 0 ? exp/realReturn : Infinity;
+    } else if (currentStrategy === 'achieve'){
+      return targetAmount;
+    }
+    return null; // 'deplete' no longer uses a threshold — see retireAge logic below
+  }
+
+  let retireAge = currentStrategy === 'deplete' ? parseFloat(document.getElementById('inputRetireAge').value) : null;
+  if (currentStrategy === 'deplete' && !(retireAge >= age0)) retireAge = age0;
+
+  let assets = assets0;
+  fiAge = null; depletionAge = null;
+  const realRows = [];
+  const maxAge = 100;
+  let assetsAtRetirement = null;
+  let sustainableAnnual = null;
+
+  // Core simulation always runs in REAL (inflation-adjusted) terms. Whether someone
+  // achieves financial independence depends on real purchasing power, not on which
+  // unit (real vs nominal won) we later choose to display numbers in — so the
+  // achievement age and depletion age must not change when the display toggle changes.
+  for (let age = age0; age <= maxAge; age++){
+    const achieved = currentStrategy === 'deplete' ? (age >= retireAge) : (fiAge !== null);
+    let savings, invReturn, expUsed, pensionAmt, dividendAmt, endAssets;
+    pensionAmt = pensionRealAt(age);
+    dividendAmt = annualDividend;
+
+    // The moment retirement begins (deplete strategy): lock in the assets accumulated
+    // so far and reverse-solve the annuity payment that spends them down to zero
+    // exactly by the target depletion age.
+    if (currentStrategy === 'deplete' && fiAge === null && age >= retireAge){
+      fiAge = retireAge;
+      assetsAtRetirement = assets;
+      const n = depletionTargetAge - retireAge;
+      const r = realReturn;
+      if (n <= 0){
+        sustainableAnnual = 0;
+      } else if (Math.abs(r) < 1e-9){
+        sustainableAnnual = assetsAtRetirement / n;
+      } else {
+        sustainableAnnual = assetsAtRetirement * r / (1 - Math.pow(1+r, -n));
+      }
+    }
+
+    if (!achieved){
+      const req = requiredAt(age);
+      savings = annualSavings;
+      invReturn = assets * realReturn;
+      expUsed = annualExpense;
+      endAssets = assets + savings + invReturn + pensionAmt + dividendAmt;
+      if (currentStrategy !== 'deplete' && req !== Infinity && endAssets >= req){
+        fiAge = age + 1;
+      }
+    } else {
+      savings = 0;
+      invReturn = assets * realReturn;
+      expUsed = currentStrategy === 'deplete' ? sustainableAnnual : (changeExpenseAfterFI ? annualPostFiExpense : annualExpense);
+      endAssets = assets + invReturn + pensionAmt + dividendAmt - expUsed;
+    }
+
+    // Depletion can occur whether or not FI has been achieved yet (e.g. expenses exceed income).
+    // Once assets hit zero, stop the simulation there so charts/table don't show past it.
+    if (depletionAge === null && endAssets <= 0){
+      depletionAge = age + 1;
+      endAssets = 0;
+      realRows.push({age, base: assets, savings, invReturn, pension: pensionAmt, dividend: dividendAmt, expense: expUsed, end: endAssets, achieved});
+      assets = endAssets;
+      break;
+    }
+
+    realRows.push({age, base: assets, savings, invReturn, pension: pensionAmt, dividend: dividendAmt, expense: expUsed, end: endAssets, achieved});
+    assets = endAssets;
+  }
+
+  // Display transform only: if showing nominal (실질가치 반영 OFF), scale each year's
+  // real-terms figures up by the cumulative inflation factor so the numbers look like
+  // the actual won amounts you'd see in that future year. This never changes fiAge/depletionAge.
+  simRows = realRows.map(r=>{
+    if (useReal) return r;
+    const factor = Math.pow(1+inflation, r.age-age0);
+    return {age:r.age, base:r.base*factor, savings:r.savings*factor, invReturn:r.invReturn*factor, pension:r.pension*factor, dividend:r.dividend*factor, expense:r.expense*factor, end:r.end*factor, achieved:r.achieved};
+  });
+
+  renderResults(age0, requiredAt, useReal, inflation, retireAge, assetsAtRetirement, sustainableAnnual);
+  renderCharts();
+  renderTable();
+}
+
+function renderResults(age0, requiredAt, useReal, inflation, retireAge, assetsAtRetirement, sustainableAnnual){
+  document.getElementById('resultsCard').style.display = 'block';
+  document.getElementById('chartCard').style.display = 'block';
+
+  const income = parseFloat(document.getElementById('inputIncome').value);
+  const expense = parseFloat(document.getElementById('inputExpense').value);
+  const savings = income - expense;
+  const rate = income>0 ? (savings/income*100).toFixed(1) : '0.0';
+
+  if (currentStrategy === 'deplete'){
+    const factor = useReal ? 1 : Math.pow(1+inflation, retireAge-age0);
+    document.getElementById('rFiAge').textContent = retireAge;
+    document.getElementById('rFiAge2').textContent = retireAge+'세';
+    document.getElementById('rYearsLeft').textContent = (retireAge-age0)+'년';
+    document.getElementById('rRequired').textContent = fmtEok(assetsAtRetirement*factor);
+    document.getElementById('rDepletion').textContent = fmtMan((sustainableAnnual/12)*factor)+'/월';
+  } else if (fiAge){
+    document.getElementById('rFiAge').textContent = fiAge;
+    document.getElementById('rFiAge2').textContent = fiAge+'세';
+    document.getElementById('rYearsLeft').textContent = (fiAge-age0)+'년';
+    let req = requiredAt(fiAge-1);
+    if (req !== Infinity && !useReal) req *= Math.pow(1+inflation, (fiAge-1)-age0);
+    document.getElementById('rRequired').textContent = req===Infinity ? '도달불가' : fmtEok(req);
+    document.getElementById('rDepletion').textContent = depletionAge ? depletionAge+'세' : '100세+';
+  } else {
+    document.getElementById('rFiAge').textContent = '미달성';
+    document.getElementById('rFiAge2').textContent = '미달성';
+    document.getElementById('rYearsLeft').textContent = '-';
+    document.getElementById('rRequired').textContent = '-';
+    document.getElementById('rDepletion').textContent = depletionAge ? depletionAge+'세' : '100세+';
+  }
+  document.getElementById('rIncome').textContent = income.toLocaleString()+'만';
+  document.getElementById('rSavings').textContent = savings.toLocaleString()+'만';
+  document.getElementById('rExpense').textContent = expense.toLocaleString()+'만';
+  document.getElementById('rRate').textContent = rate+'%';
+}
+
+function niceCeil(v){
+  if (v <= 0) return 1;
+  const mag = Math.pow(10, Math.floor(Math.log10(v)));
+  const norm = v/mag;
+  let step;
+  if (norm <= 1) step = 1;
+  else if (norm <= 2) step = 2;
+  else if (norm <= 5) step = 5;
+  else step = 10;
+  return step*mag;
+}
+
+function setupCanvas(canvas, cssHeight){
+  const dpr = window.devicePixelRatio || 1;
+  canvas.style.height = cssHeight+'px';
+  const w = canvas.clientWidth || canvas.parentElement.clientWidth;
+  canvas.width = Math.round(w*dpr);
+  canvas.height = Math.round(cssHeight*dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx, width:w, height:cssHeight};
+}
+
+function drawCashflowChart(canvas, rows){
+  const {ctx,width,height} = setupCanvas(canvas, 220);
+  ctx.clearRect(0,0,width,height);
+  const padding = {left:56, right:10, top:10, bottom:24};
+  const chartW = width - padding.left - padding.right;
+  const chartH = height - padding.top - padding.bottom;
+  const n = rows.length;
+  const slot = chartW/n;
+  const barW = Math.max(1, slot*0.62);
+
+  const maxVal = Math.max(1, ...rows.map(r=>r.savings+r.invReturn+(r.pension||0)+(r.dividend||0)), ...rows.map(r=>r.expense));
+  const yMax = niceCeil(maxVal);
+  const xForIndex = i => padding.left + i*slot + (slot-barW)/2;
+  const yForVal = v => padding.top + chartH - (v/yMax)*chartH;
+
+  ctx.strokeStyle = '#ececec'; ctx.fillStyle='#9aa0ab'; ctx.font='10px sans-serif'; ctx.textAlign='right';
+  const ticks = 4;
+  for (let t=0; t<=ticks; t++){
+    const v = yMax*t/ticks, y = yForVal(v);
+    ctx.beginPath(); ctx.moveTo(padding.left,y); ctx.lineTo(width-padding.right,y); ctx.stroke();
+    ctx.fillText(fmtEok(v), padding.left-6, y+3);
+  }
+
+  rows.forEach((r,i)=>{
+    const x = xForIndex(i);
+    const y0 = yForVal(0);
+    const ySave = yForVal(Math.max(0,r.savings));
+    const yInv = yForVal(Math.max(0,r.savings) + Math.max(0,r.invReturn));
+    const yDiv = yForVal(Math.max(0,r.savings) + Math.max(0,r.invReturn) + Math.max(0,r.dividend||0));
+    const yPension = yForVal(Math.max(0,r.savings) + Math.max(0,r.invReturn) + Math.max(0,r.dividend||0) + Math.max(0,r.pension||0));
+    ctx.fillStyle = '#0f8a72';
+    ctx.fillRect(x, ySave, barW, y0-ySave);
+    ctx.fillStyle = '#4d7fd6';
+    ctx.fillRect(x, yInv, barW, ySave-yInv);
+    ctx.fillStyle = '#8b5cf6';
+    ctx.fillRect(x, yDiv, barW, yInv-yDiv);
+    ctx.fillStyle = '#e8963a';
+    ctx.fillRect(x, yPension, barW, yDiv-yPension);
+  });
+
+  ctx.strokeStyle = '#d64545'; ctx.setLineDash([5,4]); ctx.lineWidth = 2; ctx.beginPath();
+  rows.forEach((r,i)=>{
+    const x = xForIndex(i)+barW/2, y = yForVal(r.expense);
+    if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke(); ctx.setLineDash([]);
+
+  ctx.fillStyle = '#9aa0ab'; ctx.textAlign = 'center'; ctx.font = '10px sans-serif';
+  const labelStep = Math.max(1, Math.ceil(n/7));
+  rows.forEach((r,i)=>{
+    if (i%labelStep===0) ctx.fillText(r.age+'세', xForIndex(i)+barW/2, height-8);
+  });
+
+  canvas.onclick = (e)=>{
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    let idx = Math.floor((mx-padding.left)/slot);
+    idx = Math.max(0, Math.min(n-1, idx));
+    const r = rows[idx];
+    const box = document.getElementById('cashDetail');
+    box.style.display = 'block';
+    box.innerHTML = `<b>${r.age}세</b><br>신규 저축 : <span class="g">${fmtMan(r.savings)}</span><br>배당금 : <span style="color:#c4b5fd">${fmtMan(r.dividend||0)}</span><br>국민연금 : <span style="color:#f5b876">${fmtMan(r.pension||0)}</span><br>연간 지출 : <span class="r">${fmtMan(r.expense)}</span><br>투자 수익 : <span class="b">${fmtMan(r.invReturn)}</span>`;
+  };
+}
+
+function drawNetworthChart(canvas, rows, fiAgeVal){
+  const {ctx,width,height} = setupCanvas(canvas, 220);
+  ctx.clearRect(0,0,width,height);
+  const padding = {left:58, right:10, top:22, bottom:24};
+  const chartW = width - padding.left - padding.right;
+  const chartH = height - padding.top - padding.bottom;
+  const n = rows.length;
+  const step = n>1 ? chartW/(n-1) : chartW;
+
+  const maxVal = Math.max(1, ...rows.map(r=>r.end));
+  const yMax = niceCeil(maxVal);
+  const xForIndex = i => padding.left + i*step;
+  const yForVal = v => padding.top + chartH - (Math.max(0,v)/yMax)*chartH;
+
+  ctx.strokeStyle = '#ececec'; ctx.fillStyle='#9aa0ab'; ctx.font='10px sans-serif'; ctx.textAlign='right';
+  const ticks = 4;
+  for (let t=0; t<=ticks; t++){
+    const v = yMax*t/ticks, y = yForVal(v);
+    ctx.beginPath(); ctx.moveTo(padding.left,y); ctx.lineTo(width-padding.right,y); ctx.stroke();
+    ctx.fillText(fmtEok(v), padding.left-6, y+3);
+  }
+
+  const fiIdx = fiAgeVal ? rows.findIndex(r=>r.age===fiAgeVal) : -1;
+  if (fiIdx >= 0){
+    const x = xForIndex(fiIdx);
+    ctx.strokeStyle = '#0f8a72'; ctx.setLineDash([4,4]); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x,padding.top); ctx.lineTo(x,padding.top+chartH); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#0f8a72'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(`자유 달성 (${fiAgeVal}세)`, x, padding.top-8);
+  }
+
+  ctx.strokeStyle = '#132347'; ctx.lineWidth = 2.5; ctx.beginPath();
+  rows.forEach((r,i)=>{
+    const x = xForIndex(i), y = yForVal(r.end);
+    if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  ctx.fillStyle = '#9aa0ab'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+  const labelStep = Math.max(1, Math.ceil(n/7));
+  rows.forEach((r,i)=>{
+    if (i%labelStep===0) ctx.fillText(r.age+'세', xForIndex(i), height-8);
+  });
+
+  canvas.onclick = (e)=>{
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    let idx = Math.round((mx-padding.left)/step);
+    idx = Math.max(0, Math.min(n-1, idx));
+    const r = rows[idx];
+    const box = document.getElementById('networthDetail');
+    box.style.display = 'block';
+    box.innerHTML = `<b>${r.age}세</b><br>총 자산 : ${fmtMan(r.end)}`;
+  };
+}
+
+function renderCharts(){
+  drawCashflowChart(document.getElementById('cashflowChart'), simRows);
+  drawNetworthChart(document.getElementById('networthChart'), simRows, fiAge);
+}
+
+function renderTable(){
+  const body = document.getElementById('tableBody');
+  body.innerHTML = simRows.map(r=>{
+    const fiRow = fiAge && r.age === fiAge-1 ? 'fi-row' : '';
+    return `<tr class="${fiRow}">
+      <td>${r.age}세</td>
+      <td>${Math.round(r.base).toLocaleString()}</td>
+      <td class="${r.savings>0?'pos':''}">${Math.round(r.savings).toLocaleString()}</td>
+      <td class="pos">${Math.round(r.invReturn).toLocaleString()}</td>
+      <td class="${(r.dividend||0)>0?'pos':''}">${Math.round(r.dividend||0).toLocaleString()}</td>
+      <td class="${(r.pension||0)>0?'pos':''}">${Math.round(r.pension||0).toLocaleString()}</td>
+      <td class="${r.expense>0?'neg':'pos'}">${Math.round(r.expense).toLocaleString()}</td>
+      <td>${Math.round(r.end).toLocaleString()}</td>
+    </tr>`;
+  }).join('');
+}
+
+document.getElementById('btnRun').addEventListener('click', runSimulation);
+document.getElementById('toggleReal').addEventListener('change', ()=>{ if(simRows.length) runSimulation(); });
+
+document.getElementById('btnShare').addEventListener('click', ()=>{
+  if (!simRows.length){ runSimulation(); }
+  const text = `[경제적 자유 시뮬레이션 결과]\n자유 예상 나이: ${fiAge ? fiAge+'세' : '미달성'}\n남은 준비 기간: ${fiAge ? (fiAge-parseFloat(document.getElementById('inputAge').value))+'년' : '-'}\n자산 소진 예상: ${depletionAge ? depletionAge+'세' : '100세+'}`;
+  if (navigator.clipboard){
+    navigator.clipboard.writeText(text).then(()=>alert('결과가 클립보드에 복사되었습니다.')).catch(()=>alert(text));
+  } else {
+    alert(text);
+  }
+});
+
+updateSavingsHint();
+updateReturnWarning();
+updateResultLabels();
+runSimulation();
+</script>
+</body>
+</html>
